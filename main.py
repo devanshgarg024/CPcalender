@@ -70,18 +70,17 @@ def add_to_calendar(service, contest):
         print(f"ADDED: {contest['name']}")
 
     except HttpError as error:
-        # If error is 409, the ID is taken. Check if we need to restore it.
+        # If error is 409, the ID is taken.
         if error.resp.status == 409:
             try:
-                # Fetch the existing event to see its status
+                # Attempt to fetch the event
                 existing_event = service.events().get(
                     calendarId=TARGET_CALENDAR_ID, 
                     eventId=unique_id
                 ).execute()
 
                 if existing_event['status'] == 'cancelled':
-                    # It was in the trash! Restore it.
-                    print(f"Found deleted event for {contest['name']}. Restoring...")
+                    print(f"Restoring deleted event: {contest['name']}...")
                     event_body['status'] = 'confirmed' 
                     service.events().update(
                         calendarId=TARGET_CALENDAR_ID, 
@@ -90,11 +89,14 @@ def add_to_calendar(service, contest):
                     ).execute()
                     print(f"RESTORED: {contest['name']}")
                 else:
-                    # It exists and is active. Do nothing.
                     print(f"EXISTS: {contest['name']}")
 
-            except Exception as e:
-                print(f"Could not check existing event: {e}")
+            except HttpError as inner_error:
+                # If we get a 403 here, we can't read the event. Just skip it.
+                if inner_error.resp.status == 403:
+                    print(f"PERMISSION DENIED: Could not check details for {contest['name']}. Check Calendar settings.")
+                else:
+                    print(f"Could not check existing event: {inner_error}")
         else:
             print(f"An error occurred: {error}")
 
