@@ -34,29 +34,41 @@ def auth_service_account():
 
 def add_to_calendar(service, contest):
     unique_id = f"cf{contest['id']}"
-    # ... (Same logic as before) ...
+    # ... (Keep your existing filter and date setup logic here) ...
     
-    start_dt = datetime.datetime.fromtimestamp(contest['startTimeSeconds'])
-    end_dt = start_dt + datetime.timedelta(seconds=contest['durationSeconds'])
-    
-    event_body = {
-        'id': unique_id, 
-        'summary': f"CF: {contest['name']}",
-        'description': f"Link: https://codeforces.com/contest/{contest['id']}",
-        'start': {'dateTime': start_dt.isoformat(), 'timeZone': 'Asia/Kolkata'},
-        'end': {'dateTime': end_dt.isoformat(), 'timeZone': 'Asia/Kolkata'},
-    }
+    # ... (Keep your event_body definition here) ...
 
     try:
-        # NOTICE: We use TARGET_CALENDAR_ID here
         service.events().insert(calendarId=TARGET_CALENDAR_ID, body=event_body).execute()
         print(f"ADDED: {contest['name']}")
-    except HttpError as error:
-        if error.resp.status == 409:
-            print(f"EXISTS: {contest['name']}")
-        else:
-            print(f"Error: {error}")
 
+    except HttpError as error:
+        # If error is 409, the ID is taken. Let's check WHY.
+        if error.resp.status == 409:
+            try:
+                # Fetch the existing event to see its status
+                existing_event = service.events().get(
+                    calendarId=TARGET_CALENDAR_ID, 
+                    eventId=unique_id
+                ).execute()
+
+                if existing_event['status'] == 'cancelled':
+                    # It was deleted! Let's "Resurrect" it by updating status to confirmed
+                    event_body['status'] = 'confirmed' 
+                    service.events().update(
+                        calendarId=TARGET_CALENDAR_ID, 
+                        eventId=unique_id, 
+                        body=event_body
+                    ).execute()
+                    print(f"RESTORED: {contest['name']} (was deleted)")
+                else:
+                    print(f"EXISTS: {contest['name']}")
+
+            except Exception as e:
+                print(f"Could not check existing event: {e}")
+        else:
+            print(f"An error occurred: {error}")
+            
 def main():
     creds = auth_service_account()
     service = build('calendar', 'v3', credentials=creds)
