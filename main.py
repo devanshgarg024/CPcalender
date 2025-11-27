@@ -43,7 +43,7 @@ def auth_service_account():
 
 def add_to_calendar(service, contest):
     # Unique ID to prevent duplicates (e.g., cf1950)
-    unique_id = f"cf{contest['id']}"
+    unique_id = f"cf{contest['id']}_v2"
     
     # Calculate start and end times
     start_dt = datetime.datetime.fromtimestamp(contest['startTimeSeconds'])
