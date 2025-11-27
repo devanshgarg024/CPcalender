@@ -10,7 +10,7 @@ from googleapiclient.errors import HttpError
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 CALENDAR_ID = 'primary' # This refers to the robot's primary calendar OR the one you shared
 # If 'primary' doesn't work, use your actual gmail address as the ID (e.g., 'yourname@gmail.com')
-TARGET_CALENDAR_ID = 'YOUR_GMAIL_ADDRESS@gmail.com' 
+TARGET_CALENDAR_ID = 'devanshgarg024@gmail.com' 
 
 def get_codeforces_contests():
     # ... (Same as your previous code) ...
