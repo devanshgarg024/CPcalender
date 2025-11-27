@@ -33,7 +33,7 @@ def auth_service_account():
     return creds
 
 def add_to_calendar(service, contest):
-    unique_id = f"cf{contest['id']}_v2"
+    unique_id = f"cf{contest['id']}v2"
     # ... (Same logic as before) ...
     
     start_dt = datetime.datetime.fromtimestamp(contest['startTimeSeconds'])
