@@ -8,16 +8,21 @@ from googleapiclient.errors import HttpError
 
 # --- CONFIGURATION ---
 SCOPES = ['https://www.googleapis.com/auth/calendar']
-CALENDAR_ID = 'primary' # This refers to the robot's primary calendar OR the one you shared
-# If 'primary' doesn't work, use your actual gmail address as the ID (e.g., 'yourname@gmail.com')
+
+# Your specific email is the target calendar
 TARGET_CALENDAR_ID = 'devanshgarg024@gmail.com' 
 
 def get_codeforces_contests():
-    # ... (Same as your previous code) ...
+    print("Fetching contests from Codeforces...")
     try:
         url = "https://codeforces.com/api/contest.list"
+        # We only want official contests (gym=false)
         resp = requests.get(url, params={"gym": "false"}).json()
-        if resp["status"] != "OK": return []
+        
+        if resp["status"] != "OK":
+            return []
+        
+        # Filter for upcoming contests only (phase="BEFORE")
         upcoming = [c for c in resp["result"] if c["phase"] == "BEFORE"]
         return upcoming
     except Exception as e:
@@ -25,7 +30,11 @@ def get_codeforces_contests():
         return []
 
 def auth_service_account():
-    # Load the secret from the environment variable
+    # Load the secret from the environment variable (GCP_SA_KEY)
+    if 'GCP_SA_KEY' not in os.environ:
+        print("Error: GCP_SA_KEY environment variable not found.")
+        return None
+
     service_account_info = json.loads(os.environ['GCP_SA_KEY'])
     creds = service_account.Credentials.from_service_account_info(
         service_account_info, scopes=SCOPES
@@ -33,26 +42,35 @@ def auth_service_account():
     return creds
 
 def add_to_calendar(service, contest):
+    # Unique ID to prevent duplicates (e.g., cf1950)
     unique_id = f"cf{contest['id']}"
-    # ... (Same logic as before) ...
     
+    # Calculate start and end times
     start_dt = datetime.datetime.fromtimestamp(contest['startTimeSeconds'])
     end_dt = start_dt + datetime.timedelta(seconds=contest['durationSeconds'])
     
+    # Define the event details
     event_body = {
         'id': unique_id, 
         'summary': f"CF: {contest['name']}",
         'description': f"Link: https://codeforces.com/contest/{contest['id']}",
-        'start': {'dateTime': start_dt.isoformat(), 'timeZone': 'Asia/Kolkata'},
-        'end': {'dateTime': end_dt.isoformat(), 'timeZone': 'Asia/Kolkata'},
+        'start': {
+            'dateTime': start_dt.isoformat(),
+            'timeZone': 'Asia/Kolkata',
+        },
+        'end': {
+            'dateTime': end_dt.isoformat(),
+            'timeZone': 'Asia/Kolkata',
+        },
     }
 
     try:
+        # Try to insert the event
         service.events().insert(calendarId=TARGET_CALENDAR_ID, body=event_body).execute()
         print(f"ADDED: {contest['name']}")
 
     except HttpError as error:
-        # If error is 409, the ID is taken. Let's check WHY.
+        # If error is 409, the ID is taken. Check if we need to restore it.
         if error.resp.status == 409:
             try:
                 # Fetch the existing event to see its status
@@ -62,15 +80,17 @@ def add_to_calendar(service, contest):
                 ).execute()
 
                 if existing_event['status'] == 'cancelled':
-                    # It was deleted! Let's "Resurrect" it by updating status to confirmed
+                    # It was in the trash! Restore it.
+                    print(f"Found deleted event for {contest['name']}. Restoring...")
                     event_body['status'] = 'confirmed' 
                     service.events().update(
                         calendarId=TARGET_CALENDAR_ID, 
                         eventId=unique_id, 
                         body=event_body
                     ).execute()
-                    print(f"RESTORED: {contest['name']} (was deleted)")
+                    print(f"RESTORED: {contest['name']}")
                 else:
+                    # It exists and is active. Do nothing.
                     print(f"EXISTS: {contest['name']}")
 
             except Exception as e:
@@ -80,8 +100,13 @@ def add_to_calendar(service, contest):
 
 def main():
     creds = auth_service_account()
+    if not creds:
+        return
+
     service = build('calendar', 'v3', credentials=creds)
     contests = get_codeforces_contests()
+    print(f"Found {len(contests)} upcoming contests.")
+    
     for c in contests:
         add_to_calendar(service, c)
 
