@@ -34,9 +34,18 @@ def auth_service_account():
 
 def add_to_calendar(service, contest):
     unique_id = f"cf{contest['id']}"
-    # ... (Keep your existing filter and date setup logic here) ...
+    # ... (Same logic as before) ...
     
-    # ... (Keep your event_body definition here) ...
+    start_dt = datetime.datetime.fromtimestamp(contest['startTimeSeconds'])
+    end_dt = start_dt + datetime.timedelta(seconds=contest['durationSeconds'])
+    
+    event_body = {
+        'id': unique_id, 
+        'summary': f"CF: {contest['name']}",
+        'description': f"Link: https://codeforces.com/contest/{contest['id']}",
+        'start': {'dateTime': start_dt.isoformat(), 'timeZone': 'Asia/Kolkata'},
+        'end': {'dateTime': end_dt.isoformat(), 'timeZone': 'Asia/Kolkata'},
+    }
 
     try:
         service.events().insert(calendarId=TARGET_CALENDAR_ID, body=event_body).execute()
@@ -68,7 +77,7 @@ def add_to_calendar(service, contest):
                 print(f"Could not check existing event: {e}")
         else:
             print(f"An error occurred: {error}")
-            
+
 def main():
     creds = auth_service_account()
     service = build('calendar', 'v3', credentials=creds)
