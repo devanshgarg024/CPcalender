@@ -33,18 +33,37 @@ def auth_service_account():
     return creds
 
 def add_to_calendar(service, contest):
-    unique_id = f"cf{contest['id']}v2"
+    unique_id = f"cf{contest['id']}v3"
     # ... (Same logic as before) ...
+     
+    # --- TIMEZONE FIX IS HERE ---
+    # 1. Create a timezone object for UTC and IST (UTC+5:30)
+    utc_zone = datetime.timezone.utc
+    ist_zone = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+
+    # 2. Get the time as "Aware" UTC time
+    start_utc = datetime.datetime.fromtimestamp(contest['startTimeSeconds'], utc_zone)
     
-    start_dt = datetime.datetime.fromtimestamp(contest['startTimeSeconds'])
-    end_dt = start_dt + datetime.timedelta(seconds=contest['durationSeconds'])
+    # 3. Convert that UTC time to IST
+    start_ist = start_utc.astimezone(ist_zone)
+    end_ist = start_ist + datetime.timedelta(seconds=contest['durationSeconds'])
     
+    # 4. Format them as ISO strings (Example: "2025-11-28T20:00:00+05:30")
+    start_str = start_ist.isoformat()
+    end_str = end_ist.isoformat()
+    # ----------------------------
     event_body = {
         'id': unique_id, 
         'summary': f"CF: {contest['name']}",
         'description': f"Link: https://codeforces.com/contest/{contest['id']}",
-        'start': {'dateTime': start_dt.isoformat(), 'timeZone': 'Asia/Kolkata'},
-        'end': {'dateTime': end_dt.isoformat(), 'timeZone': 'Asia/Kolkata'},
+        'start': {
+            'dateTime': start_str,
+            'timeZone': 'Asia/Kolkata',
+        },
+        'end': {
+            'dateTime': end_str,
+            'timeZone': 'Asia/Kolkata',
+        }, 
     }
 
     try:
