@@ -33,7 +33,7 @@ def auth_service_account():
     return creds
 
 def add_to_calendar(service, contest):
-    unique_id = f"cf{contest['id']}v3"
+    unique_id = f"cf{contest['id']}v4"
     # ... (Same logic as before) ...
      
     # --- TIMEZONE FIX IS HERE ---
