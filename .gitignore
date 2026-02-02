@@ -1,0 +1,15 @@
+# Secrets
+contestsync-66da12dff3fa.json
+*.json
+token.json
+credentials.json
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.idea/
+.vscode/
